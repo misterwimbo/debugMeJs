@@ -17,7 +17,7 @@
 
 
     let bug,forms = null;
-    let submitFormOff, submitFormOn, log, displayForms,getCookies = null;
+    let submitFormOff, submitFormOn, log, displayForms,getCookies,findDuplicateIds = null;
     class debugMe {
 
 
@@ -238,19 +238,70 @@
             console.table(data);
             console.groupEnd();
         }
+
+
+         findDuplicateIds = () => {
+
+            let identifiants = {}; // Objet pour stocker les identifiants uniques
+            let ArrayRef = []; // Tableau pour stocker les identifiants dupliqués
+        
+            // Récupère tous les éléments du DOM
+            let tousElements = document.all || document.getElementsByTagName("*");
+        
+            // Parcourt tous les éléments du DOM
+            for (var i = 0, longueur = tousElements.length; i < longueur; i++) {
+                var id = tousElements[i].id; // Récupère l'identifiant de l'élément actuel
+                if (id) { // Vérifie si l'élément a un identifiant
+                    if (identifiants[id]) { // Vérifie si l'identifiant est déjà dans l'objet identifiants
+                        // Si l'identifiant est déjà dans l'objet identifiants et n'est pas encore dans ArrayRef
+                        if (!ArrayRef.includes(id)) {
+                            ArrayRef.push(id); // Ajoute l'identifiant au tableau ArrayRef
+                        }
+                    } else {
+                        identifiants[id] = 1; // Ajoute l'identifiant à l'objet identifiants
+                    }
+                }
+            }
+        
+            // Si des identifiants dupliqués ont été trouvés
+            if (ArrayRef.length > 0) {
+                // Affiche un groupe de messages dans la console, avec le nombre d'identifiants dupliqués
+                console.groupCollapsed("%cDuplicate ids" + " (" + ArrayRef.length + ")", "color: red; font-weight: bold;");
+                // Affiche les identifiants dupliqués sous forme de tableau
+                console.table(ArrayRef);
+                // Ferme le groupe de messages dans la console
+                console.groupEnd();
+            } else {
+                // Si aucun identifiant dupliqué n'a été trouvé, affiche un message
+                console.log("%cAucun doublon d'identifiant trouvé :) ", "color: green; font-weight: bold;");
+            }
+        }
+        
+
+
+
+
+
+
     }
 
     function debugMeStart() {
+
+        if ( bug != undefined) {
+            return;
+        }
+
         bug = new debugMe();
 
         // tous les formulaires de la page
         forms = document.getElementsByTagName('form');
 
-        globalThis.fof    = submitFormOff = bug.submitFormOff;
-        globalThis.fon    = submitFormOn  = bug.submitFormOn;
-        globalThis.log    = log           = bug.log;
-        globalThis.df     = displayForms  = bug.displayForms;
-        globalThis.cc     = getCookies    = bug.getCookies;
+        globalThis.fof = submitFormOff    = bug.submitFormOff;
+        globalThis.fon = submitFormOn     = bug.submitFormOn;
+        globalThis.log = log              = bug.log;
+        globalThis.df  = displayForms     = bug.displayForms;
+        globalThis.cc  = getCookies       = bug.getCookies;
+        globalThis.ids = findDuplicateIds = bug.findDuplicateIds;
 
 
         globalThis.bug    = bug;
@@ -321,7 +372,9 @@
             fon() => Autoriser les formulaires\n
             df() => Afficher les formulaires\n
             cc() => Afficher les cookies\n
-            log() => new console.log \n
+            ids() => Trouve les doublon d'id\n\n
+
+            log() => custom console.log \n
 
             bug.confirmSend = false => Desactiver la confirmation (par defaut)\n
             bug.confirmSend = true => Activer la confirmation\n\n
@@ -331,6 +384,7 @@
         `);
         console.groupEnd();
     }
+    ids();
     globalThis.h = help;
     help();   //retier cette ligne pour ne pas afficher l'aide au dÃ©marrage
     }
