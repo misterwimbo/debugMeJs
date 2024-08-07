@@ -10,12 +10,6 @@
 // ==/UserScript==
 (function() {
 
-
-
-
-
-
-
     let bug,forms = null;
     let submitFormOff, submitFormOn, log, displayForms,getCookies,findDuplicateIds = null;
     class debugMe {
@@ -82,7 +76,7 @@
         submitFormOff = () => {
             // Parcours chaque formulaire
             for (var i = 0; i < forms.length; i++) {
-                // Ajoute un Ã©couteur d'Ã©vÃ©nement 'submit' au formulaire
+                // Ajoute un listener 'submit' au formulaire
                 forms[i].addEventListener('submit', this.formSubmitListener);
             }
             this.displayStatusOff();
@@ -240,7 +234,7 @@
         }
 
 
-         findDuplicateIds = () => {
+        findDuplicateIds = () => {
 
             let identifiants = {}; // Objet pour stocker les identifiants uniques
             let ArrayRef = []; // Tableau pour stocker les identifiants dupliqués
@@ -276,14 +270,65 @@
                 console.log("%cAucun doublon d'identifiant trouvé :) ", "color: green; font-weight: bold;");
             }
         }
+
+        showHideInputHidden = () =>{
+
+            let inputs         = document.getElementsByTagName('input');
+            let show           = false;
+            let nbrInputHidden = 0;
+
         
+        
+            for (let i = 0; i < inputs.length; i++) {
+
+                if (inputs[i].type === 'hidden') {
+
+                    inputs[i].classList.add('h_hidden_h');
+                    inputs[i].type = "text";
+                    show = true;
+                    nbrInputHidden++;
 
 
+                    //create temp label for hidden input label = input name, place label in dom before input
+                    let label = document.createElement('label');
+                    label.textContent = inputs[i].name;
+                    label.classList.add('h_hidden_h_label');
+                    inputs[i].parentNode.insertBefore(label, inputs[i]);
 
+                    
+                  
+                }
 
+                else if (inputs[i].type === 'text' && inputs[i].classList.contains('h_hidden_h')) {
+                    inputs[i].type = "hidden";
+                    inputs[i].classList.remove('h_hidden_h');
+                    nbrInputHidden++;
 
+                    let labels = document.getElementsByClassName('h_hidden_h_label');
+                    for (let j = 0; j < labels.length; j++) {
+                        labels[j].remove();
+                    }
+                }
+            }
 
+            if (nbrInputHidden === 0) {
+                console.log('%cAucun input hidden trouvé', 'color: orange');
+            }
+
+            else{
+
+                if (show) {
+                    console.log('%cles input hidden sont visible', 'color: red');
+        
+                } else {
+                    console.log('%cles input hidden sont a nouveau dans l\'ombre', 'color: green');
+                }
+            }
+
+        }
     }
+
+    
 
     function debugMeStart() {
 
@@ -302,6 +347,7 @@
         globalThis.df  = displayForms     = bug.displayForms;
         globalThis.cc  = getCookies       = bug.getCookies;
         globalThis.ids = findDuplicateIds = bug.findDuplicateIds;
+        globalThis.sh  = bug.showHideInputHidden;
 
 
         globalThis.bug    = bug;
@@ -352,43 +398,59 @@
             }
         });
 
-        // Fermeture du menu personnalisÃ© lors d'un clic ailleurs
+        // Fermeture du menu personnalisé lors d'un clic ailleurs
         document.addEventListener('click', () => {
             customMenu.style.display = 'none';
         });
 
-        //EmpÃªcher la fermeture du menu lors d'un clic sur celui-ci
+        //Empécher la fermeture du menu lors d'un clic sur celui-ci
         // customMenu.addEventListener('click', (e) => {
         //     e.stopPropagation();
         // });
 
-
+        
         function help(){
 
-        console.groupCollapsed('%chelp debugMe click me !', 'color: #810015; font-size: 12px; ;background-color: #F0F0F0; padding: 1px 3px; border-radius: 5px;');
-        console.log('Bienvenue dans le mode debug');
-        console.log(`
-            fof()  => Intercepter les formulaires\n
-            fon() => Autoriser les formulaires\n
-            df() => Afficher les formulaires\n
-            cc() => Afficher les cookies\n
-            ids() => Trouve les doublon d'id\n\n
+            console.groupCollapsed('%chelp debugMe click me !', 'color: #810015; font-size: 12px; ;background-color: #F0F0F0; padding: 1px 3px; border-radius: 5px;');
+            console.log('Bienvenue dans le mode debug');
+            console.log(`
+                fof()   => Intercepter les formulaires\n
+                fon()   => Autoriser les formulaires\n
+                df()    => Afficher les formulaires\n
+                cc()    => Afficher les cookies\n
+                ids()   => Trouve les doublon d'id\n\n
+                sh()    => Afficher les input hidden\n
 
-            log() => custom console.log \n
+                log() => custom console.log \n
 
-            bug.confirmSend = false => Desactiver la confirmation (par defaut)\n
-            bug.confirmSend = true => Activer la confirmation\n\n
-            -------------------------------------------\n
-            click droit + shift pour afficher le menu\n\n
-            h() => Afficher l'aide\n
-        `);
-        console.groupEnd();
+                bug.confirmSend = false => Desactiver la confirmation (par defaut)\n
+                bug.confirmSend = true => Activer la confirmation\n\n
+                -------------------------------------------\n
+                click droit + shift pour afficher le menu\n\n
+                h() => Afficher l'aide\n
+            `);
+
+            // console.table(
+            //     {"fof()": "Intercepter les formulaires", "fon()": "Autoriser les formulaires",
+            //     "df()": "Afficher les formulaires", "cc()": "Afficher les cookies",
+            //     "ids()": "Trouve les doublon d'id", "sh()": "Afficher les input hidden",
+            //     "log()": "custom console.log", "h()": "Afficher l'aide"}
+            // );
+
+            console.groupEnd();
+        }
+
+
+        const style_h_hidden_h = document.createElement('style');
+        style_h_hidden_h.textContent = `.h_hidden_h { border: 4px solid red !important;  } label.h_hidden_h_label { color: #8f2222;font-style: oblique;font-size: x-large;margin: 10px;}`;
+        
+        document.head.appendChild(style_h_hidden_h);
+    
+
+        ids();
+        globalThis.h = help;
+        help();   //retier cette ligne pour ne pas afficher l'aide au dÃ©marrage
     }
-    ids();
-    globalThis.h = help;
-    help();   //retier cette ligne pour ne pas afficher l'aide au dÃ©marrage
-    }
+
     debugMeStart();
-
-
 })();
