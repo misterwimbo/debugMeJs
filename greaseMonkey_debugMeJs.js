@@ -19,15 +19,15 @@
     let bug,forms = null;
     let submitFormOff, submitFormOn, log, displayForms,getCookies = null;
     class debugMe {
-    
-    
+
+
         constructor() {
             this.confirmSend = false;
             this.blockForms = false;
         }
-    
-    
-    
+
+
+
         formSubmitListener = (event) => {
             if (!this.blockForms) return;
             // EmpÃªche la soumission du formulaire
@@ -78,7 +78,7 @@
                 }
             }
         }
-    
+
         submitFormOff = () => {
             // Parcours chaque formulaire
             for (var i = 0; i < forms.length; i++) {
@@ -88,7 +88,7 @@
             this.displayStatusOff();
             this.blockForms = true;
         }
-    
+
         submitFormOn = () => {
             let forms = document.getElementsByTagName('form');
             for (let i = 0; i < forms.length; i++) {
@@ -98,136 +98,132 @@
             this.removeDisplayOffStatus();
             this.blockForms = false;
         }
-    
+
         log = (args) => {
-            console.log(typeof args);
-            console.log(args);
+
+            let type = typeof args;
+
+            if (args === null) {
+                type = 'null';
+            }
+
+            if (args === "object" && Array.isArray(args)) {
+                type = 'array';
+            }
+
+            console.log( '%cType : ' +  type , 'color: red');
+
+            if (typeof args === 'string') {
+                console.log('%clength : ' + args.length , 'color: red');
+            }
+
+           if ( typeof args === 'function') //inutile d'afficher le code d'une fonction en log, ce n'est pas complet
+                console.table(args);
+            else 
+                console.log(args);
+
             if (typeof args === 'object' || typeof args === 'array') {
                 console.groupCollapsed('Displaying object');
                 console.table(args);
                 console.groupEnd();
             }
         }
-    
+
         displayStatusOff = () => {
-    
+
             if (document.getElementById('debugMeJs_status') != null)
                 return;
-    
+
             const statusDiv = document.createElement('div');
             statusDiv.id = 'debugMeJs_status';
             statusDiv.style.cssText = `position: fixed; top: 0; left: 0; background: red; color:white;border: 1px solid #ccc; padding: 5px; z-index: 1000;`;
-    
+
             statusDiv.innerHTML = `submit form off`;
-    
+
             document.body.appendChild(statusDiv);
         }
-    
+
         removeDisplayOffStatus = () => {
-    
+
             if (document.getElementById('debugMeJs_status') == null)
                 return;
-    
+
             document.getElementById('debugMeJs_status').remove();
         }
-    
-    
+
+
         displayForms = () => {
-    
-    
+
+
             forms = document.getElementsByTagName('form');
-    
+
             if (forms == null || forms == undefined || forms.length == 0) {
                 console.error('Aucun formulaire');
                 return;
             }
-    
-    
-    
-    
-    
-    
-    
+
+
+
+
+
+
+
             console.groupCollapsed('forms' );
                 this.log(forms);
             console.groupEnd();
-    
-    
-    
+
+
+
             console.groupCollapsed('Forms_details ');
             for (let i = 0; i < forms.length; i++) {
-    
+
                 console.groupCollapsed('Forms ' + i + ' : ' + forms[i].action) ;
-    
+
                     let data_form = {};
                     let form_imput = {};
-    
+
                     data_form[`Form ${i}`] = {
                         action: forms[i].action,
                         method: forms[i].method,
                         name: forms[i].name,
                         document_url: forms[i].ownerDocument.location.href
                     };
-    
-    
+
+
                     for (let j = 0; j < forms[i].elements.length; j++) {
                         var input = forms[i].elements[j];
-    
-    
+
+
                     if ( input.type === 'submit' || input.type === 'button' || input.type === 'reset'  || input.name.trim()  == '' ) { continue; }
-    
+
                         var item = {
                             name: input.name,
                             required: input.required,
                             hidden: input.type === 'hidden',
                             value: input.value
                         };
-    
+
                         form_imput[`Input ${j}`] = item;
-    
+
                     }
-    
+
                     console.table(data_form);
                     console.table(form_imput);
                 console.groupEnd();
             }
             console.groupEnd();
-    
-    
-    
-    
-            //  data_form[`Form ${i}`].inputs = form_imput;
-    
-    
-    
-            //     console.groupCollapsed('Form ' + i);
-            //     console.log('Action: ' + forms[i].action);
-            //     console.log('Method: ' + forms[i].method);
-            //     console.log('Name: ' + forms[i].name);
-    
-            //     // Ajout de l'URL du document contenant le formulaire
-            //     console.log('Document URL: ' + forms[i].ownerDocument.location.href);
-            //     var data = [];
-            //     for (let j = 0; j < forms[i].elements.length; j++) {
-            //         var input = forms[i].elements[j];
-            //         var item = {
-            //             name: input.name,
-            //             required: input.required,
-            //             hidden: input.type === 'hidden',
-            //             value: input.value
-            //         };
-            //         data.push(item);
-            //     }
-            //     console.table(data);
-            //     console.groupEnd();
-            // }
-            // console.groupEnd();
+
+
+
+
+        
+      
         }
-    
+
         getCookies = () => {
-    
+
             this.log(document.cookie);
-    
+
             let cookies = document.cookie.split(';');
             let data = [];
             for (let i = 0; i < cookies.length; i++) {
@@ -243,25 +239,25 @@
             console.groupEnd();
         }
     }
-    
+
     function debugMeStart() {
         bug = new debugMe();
-    
+
         // tous les formulaires de la page
         forms = document.getElementsByTagName('form');
-    
+
         globalThis.fof    = submitFormOff = bug.submitFormOff;
         globalThis.fon    = submitFormOn  = bug.submitFormOn;
         globalThis.log    = log           = bug.log;
         globalThis.df     = displayForms  = bug.displayForms;
         globalThis.cc     = getCookies    = bug.getCookies;
-    
-    
+
+
         globalThis.bug    = bug;
         globalThis.forms_ = forms;
-    
-    
-    
+
+
+
         // CrÃ©ation du menu personnalisÃ©
         const customMenu = document.createElement('div');
         customMenu.id = 'custom-context-menu';
@@ -281,7 +277,7 @@
             { text: '---------------', action: () => {} },
             { text: 'Afficher le cookie', action: () => bug.getCookies() },
         ];
-    
+
         options.forEach(option => {
             const item = document.createElement('div');
             item.textContent = option.text;
@@ -291,10 +287,10 @@
             item.addEventListener('click', option.action);
             customMenu.appendChild(item);
         });
-    
+
         // Ajout du menu au document
         document.body.appendChild(customMenu);
-    
+
         // Gestion de l'affichage du menu
         document.addEventListener('contextmenu', (e) => {
             if (e.shiftKey) {
@@ -304,28 +300,29 @@
                 customMenu.style.top = `${e.pageY}px`;
             }
         });
-    
+
         // Fermeture du menu personnalisÃ© lors d'un clic ailleurs
         document.addEventListener('click', () => {
             customMenu.style.display = 'none';
         });
-    
+
         //EmpÃªcher la fermeture du menu lors d'un clic sur celui-ci
         // customMenu.addEventListener('click', (e) => {
         //     e.stopPropagation();
         // });
-    
-    
+
+
         function help(){
-    
+
         console.groupCollapsed('%chelp debugMe click me !', 'color: #810015; font-size: 12px; ;background-color: #F0F0F0; padding: 1px 3px; border-radius: 5px;');
         console.log('Bienvenue dans le mode debug');
         console.log(`
-            fof() => Intercepter les formulaires\n
+            fof()  => Intercepter les formulaires\n
             fon() => Autoriser les formulaires\n
             df() => Afficher les formulaires\n
+            cc() => Afficher les cookies\n
             log() => new console.log \n
-    
+
             bug.confirmSend = false => Desactiver la confirmation (par defaut)\n
             bug.confirmSend = true => Activer la confirmation\n\n
             -------------------------------------------\n
@@ -338,6 +335,6 @@
     help();   //retier cette ligne pour ne pas afficher l'aide au dÃ©marrage
     }
     debugMeStart();
-    
-    
+
+
 })();

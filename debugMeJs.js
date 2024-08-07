@@ -95,14 +95,36 @@ class debugMe {
      * @param {*} args - Les données à afficher.
      */
     log = (args) => {
-        console.log(typeof args);
-        console.log(args);
-        if (typeof args === 'object' || Array.isArray(args)) {
-            console.groupCollapsed('Displaying Object');
+
+        let type = typeof args;
+
+        if (args === null) {
+            type = 'null';
+        }
+
+        if (args === "object" && Array.isArray(args)) {
+            type = 'array';
+        }
+
+        console.log( '%cType : ' +  type , 'color: red');
+
+        if (typeof args === 'string') {
+            console.log('%clength : ' + args.length , 'color: red');
+        }
+
+       if ( typeof args === 'function') //inutile d'afficher le code d'une fonction en log, ce n'est pas complet
+            console.table(args);
+        else 
+            console.log(args);
+
+        if (typeof args === 'object' || typeof args === 'array') {
+            console.groupCollapsed('Displaying object');
             console.table(args);
             console.groupEnd();
         }
     }
+
+
 
     // ############## displayStatusOff ##############
     /**
@@ -286,6 +308,7 @@ function debugMeStart() {
             fof() => Intercepter les formulaires
             fon() => Autoriser les formulaires
             df() => Afficher les formulaires
+            cc() => Afficher les cookies\n
             log() => Nouvelle méthode console.log
             bug.confirmSend = false => Désactiver la confirmation (par défaut)
             bug.confirmSend = true => Activer la confirmation
