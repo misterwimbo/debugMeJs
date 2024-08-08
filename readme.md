@@ -95,3 +95,13 @@ df();
 
 // Afficher les cookies
 cc();
+
+//Affiche les inputs hidden avec leur attribut name
+sh();
+
+//Affiche les doublons d'id ( se lance à chaque rafraichissement de page )
+ids();
+
+
+//custom log amelioré
+log(args) // affichera ars avec plus de details que console.log(args)
