@@ -104,4 +104,4 @@ ids();
 
 
 //custom log amelioré
-log(args) // affichera ars avec plus de details que console.log(args)
+log(args) // affichera args avec plus de details que console.log(args)
