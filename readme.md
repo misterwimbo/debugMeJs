@@ -54,9 +54,6 @@ DebugJs est un script utilisateur conçu pour aider les développeurs à débogu
 
 
 
-
-
-
 ### Exemple d'Utilisation
 
 ```javascript
@@ -81,3 +78,8 @@ ids();
 
 //custom log amelioré
 log(args) // affichera args avec plus de details que console.log(args)
+```
+
+![image](https://raw.githubusercontent.com/misterwimbo/debugMeJs/main/debugmeJS.png)
+
+
