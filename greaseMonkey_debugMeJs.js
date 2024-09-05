@@ -113,7 +113,7 @@
 
            if ( typeof args === 'function') //inutile d'afficher le code d'une fonction en log, ce n'est pas complet
                 console.table(args);
-            else 
+            else
                 console.log(args);
 
             if (typeof args === 'object' || typeof args === 'array') {
@@ -210,8 +210,8 @@
 
 
 
-        
-      
+
+
         }
 
         getCookies = () => {
@@ -238,10 +238,10 @@
 
             let identifiants = {}; // Objet pour stocker les identifiants uniques
             let ArrayRef = []; // Tableau pour stocker les identifiants dupliqués
-        
+
             // Récupère tous les éléments du DOM
             let tousElements = document.all || document.getElementsByTagName("*");
-        
+
             // Parcourt tous les éléments du DOM
             for (var i = 0, longueur = tousElements.length; i < longueur; i++) {
                 var id = tousElements[i].id; // Récupère l'identifiant de l'élément actuel
@@ -256,7 +256,7 @@
                     }
                 }
             }
-        
+
             // Si des identifiants dupliqués ont été trouvés
             if (ArrayRef.length > 0) {
                 // Affiche un groupe de messages dans la console, avec le nombre d'identifiants dupliqués
@@ -277,8 +277,8 @@
             let show           = false;
             let nbrInputHidden = 0;
 
-        
-        
+
+
             for (let i = 0; i < inputs.length; i++) {
 
                 if (inputs[i].type === 'hidden') {
@@ -295,8 +295,8 @@
                     label.classList.add('h_hidden_h_label');
                     inputs[i].parentNode.insertBefore(label, inputs[i]);
 
-                    
-                  
+
+
                 }
 
                 else if (inputs[i].type === 'text' && inputs[i].classList.contains('h_hidden_h')) {
@@ -319,7 +319,7 @@
 
                 if (show) {
                     console.log('%cles input hidden sont visible', 'color: red');
-        
+
                 } else {
                     console.log('%cles input hidden sont a nouveau dans l\'ombre', 'color: green');
                 }
@@ -328,7 +328,75 @@
         }
     }
 
+    //////////////////////////////////////////
+    ///////////////////////////////////////
+    var elementsWithEvents = document.querySelectorAll('[onclick], [onchange], [onkeyup], [onkeydown], [onkeypress], [ondblclick]');
+
+    // Créer l'élément affiché en haut à gauche
+    var topLeftCorner = document.createElement('div');
+    topLeftCorner.style.position = 'fixed';
+    topLeftCorner.style.top = '45px';
+    topLeftCorner.style.left = '20px';
+    topLeftCorner.style.background = 'black';
+    topLeftCorner.style.padding = '10px';
+    topLeftCorner.style.zIndex = '1000';
+    topLeftCorner.style.color = 'white';
+    topLeftCorner.style.display = 'none';
+    topLeftCorner.style.borderRadius = '5px';
+    topLeftCorner.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.1)';
+    topLeftCorner.id = 'topLeftCornerInfos';
     
+    
+    // Bouton pour fermer l'affichage
+    // var closeButton = document.createElement('span');
+    // closeButton.textContent = '✖';
+    // closeButton.style.color = 'red';
+    // closeButton.style.cursor = 'pointer';
+    // closeButton.style.float = 'right';
+    // closeButton.style.marginLeft = '10px';
+    // closeButton.addEventListener('click', function () {
+    //     topLeftCorner.style.display = 'none';
+    // });
+    // topLeftCorner.appendChild(closeButton);
+    document.body.appendChild(topLeftCorner);
+    
+    // Fonction pour afficher les informations sur l'élément
+    function showEventInfo(eventType, element) {
+        let info = `<span style="color:red;">${eventType} :</span>  ${element.getAttribute(eventType)}<br>`;
+        
+        // Ajouter id s'il existe
+        if (element.id) {
+            info += `<span style="color:red;">id :</span>  ${element.id}<br>`;
+        }
+    
+        // Ajouter name s'il existe
+        if (element.name) {
+            info += `<span style="color:red;">name :</span>  ${element.name}<br>`;
+        }
+    
+        // Mettre à jour uniquement le contenu, sans recréer le bouton
+        topLeftCorner.innerHTML = '';
+        topLeftCorner.innerHTML += info;
+        topLeftCorner.style.display = 'block';
+    }
+    
+    // Parcourir tous les éléments et ajouter les listeners
+    elementsWithEvents.forEach(function (element) {
+        ['onclick', 'onchange', 'onkeyup', 'onkeydown', 'onkeypress', 'ondblclick'].forEach(function (eventType) {
+            if (element.hasAttribute(eventType)) {
+                element.addEventListener('mouseover', function () {
+                    showEventInfo(eventType, element);
+                });
+            }
+        });
+    });
+    
+///////////////////////////////////////
+///////////////////////////////////////
+
+
+
+
 
     function debugMeStart() {
 
@@ -408,7 +476,7 @@
         //     e.stopPropagation();
         // });
 
-        
+
         function help(){
 
             console.groupCollapsed('%chelp debugMe click me !', 'color: #810015; font-size: 12px; ;background-color: #F0F0F0; padding: 1px 3px; border-radius: 5px;');
@@ -443,9 +511,9 @@
 
         const style_h_hidden_h = document.createElement('style');
         style_h_hidden_h.textContent = `.h_hidden_h { border: 4px solid red !important;  } label.h_hidden_h_label { color: #8f2222;font-style: oblique;font-size: x-large;margin: 10px;}`;
-        
+
         document.head.appendChild(style_h_hidden_h);
-    
+
 
         ids();
         globalThis.h = help;
