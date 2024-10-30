@@ -482,6 +482,14 @@ elementsWithEvents.forEach(function (element) {
             { text: 'Intercepter les Formulaires', action: () => bug.submitFormOff() },
             { text: 'Autoriser les Formulaires', action: () => bug.submitFormOn() },
             { text: 'Afficher les Formulaires', action: () => displayForms() },
+            { text: 'Trouver les doublons d\'id', action: () => findDuplicateIds() },
+            { text: 'Afficher/Cacher  les input hidden', action: () => bug.showHideInputHidden() },
+            { text: '---------------', action: () => {} },
+            { text: 'Console.log', action: () => log('Hello World !') },
+
+
+            { text: '---------------', action: () => {} },
+            { text: 'Aide', action: () => help() },
             { text: '---------------', action: () => {} },
             { text: 'Afficher le cookie', action: () => bug.getCookies() },
         ];
