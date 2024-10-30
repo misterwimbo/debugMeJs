@@ -1,4 +1,4 @@
-let bug,forms = null;
+ let bug,forms = null;
     let submitFormOff, submitFormOn, log, displayForms,getCookies,findDuplicateIds = null;
     class debugMe {
 
@@ -277,12 +277,22 @@ let bug,forms = null;
                     nbrInputHidden++;
 
 
+
                     //create temp label for hidden input label = input name, place label in dom before input
                     let label = document.createElement('label');
-                    label.textContent = inputs[i].name;
-                    label.classList.add('h_hidden_h_label');
-                    inputs[i].parentNode.insertBefore(label, inputs[i]);
 
+                        let name_ = inputs[i].name;
+                        let id_ = inputs[i].id;
+
+                        let label_name ='';
+                        let label_id = '';
+
+                        if (name_ != '') {  label_name = ' name: ' + name_; }
+                        if (id_ != '') {  label_id = ' id: ' + id_; }
+
+                        label.textContent = ' ' + label_name + label_id;
+                        label.classList.add('h_hidden_h_label');
+                        inputs[i].parentNode.insertBefore(label, inputs[i]);
 
 
                 }
@@ -319,6 +329,7 @@ let bug,forms = null;
     //////////////////////////////////////////
     ///////////////////////////////////////
     var elementsWithEvents = document.querySelectorAll('[onclick], [onchange], [onkeyup], [onkeydown], [onkeypress], [ondblclick]');
+    var inputsElements = document.querySelectorAll('input, select, textarea, button');
 
     // Créer l'élément affiché en haut à gauche
     var topLeftCorner = document.createElement('div');
@@ -333,8 +344,8 @@ let bug,forms = null;
     topLeftCorner.style.borderRadius = '5px';
     topLeftCorner.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.1)';
     topLeftCorner.id = 'topLeftCornerInfos';
-    
-    
+
+
     // Bouton pour fermer l'affichage
     // var closeButton = document.createElement('span');
     // closeButton.textContent = '✖';
@@ -347,38 +358,70 @@ let bug,forms = null;
     // });
     // topLeftCorner.appendChild(closeButton);
     document.body.appendChild(topLeftCorner);
-    
+
     // Fonction pour afficher les informations sur l'élément
-    function showEventInfo(eventType, element) {
-        let info = `<span style="color:red;">${eventType} :</span>  ${element.getAttribute(eventType)}<br>`;
-        
+    function showEventInfo(eventType, element , haveEvent = false) {
+
+        let info = '';
+
+        if (haveEvent || eventType) {
+        info += `<span style="color:red;">${eventType} :</span>  ${element.getAttribute(eventType)}<br>`;
+        }
+
         // Ajouter id s'il existe
         if (element.id) {
             info += `<span style="color:red;">id :</span>  ${element.id}<br>`;
         }
-    
+
         // Ajouter name s'il existe
         if (element.name) {
             info += `<span style="color:red;">name :</span>  ${element.name}<br>`;
         }
-    
+
         // Mettre à jour uniquement le contenu, sans recréer le bouton
         topLeftCorner.innerHTML = '';
         topLeftCorner.innerHTML += info;
         topLeftCorner.style.display = 'block';
     }
-    
+
     // Parcourir tous les éléments et ajouter les listeners
-    elementsWithEvents.forEach(function (element) {
-        ['onclick', 'onchange', 'onkeyup', 'onkeydown', 'onkeypress', 'ondblclick'].forEach(function (eventType) {
-            if (element.hasAttribute(eventType)) {
-                element.addEventListener('mouseover', function () {
-                    showEventInfo(eventType, element);
-                });
-            }
+    let timeoutId__;
+
+
+
+
+
+
+    inputsElements.forEach(function (element) {
+        element.addEventListener('mouseover', function () {
+            timeoutId__ = setTimeout(function () {showEventInfo('', element , false); }, 400);
+        });
+
+        element.addEventListener('mouseout', function () {
+            clearTimeout(timeoutId__);
+            //topLeftCorner.style.display = 'none';
         });
     });
-    
+
+elementsWithEvents.forEach(function (element) {
+    ['onclick', 'onchange', 'onkeyup', 'onkeydown', 'onkeypress', 'ondblclick'].forEach(function (eventType) {
+        if (element.hasAttribute(eventType)) {
+            element.addEventListener('mouseover', function () {
+                timeoutId__ = setTimeout(function () {
+                    showEventInfo(eventType, element );
+                }, 400);
+            });
+
+
+            element.addEventListener('mouseout', function () {
+                clearTimeout(timeoutId__);
+                // topLeftCorner.style.display = 'none';
+            });
+        }
+    });
+
+
+});
 ///////////////////////////////////////
 ///////////////////////////////////////
 
@@ -427,6 +470,14 @@ let bug,forms = null;
             { text: 'Intercepter les Formulaires', action: () => bug.submitFormOff() },
             { text: 'Autoriser les Formulaires', action: () => bug.submitFormOn() },
             { text: 'Afficher les Formulaires', action: () => displayForms() },
+            { text: 'Trouver les doublons d\'id', action: () => findDuplicateIds() },
+            { text: 'Afficher/Cacher  les input hidden', action: () => bug.showHideInputHidden() },
+            { text: '---------------', action: () => {} },
+            { text: 'Console.log', action: () => log('Hello World !') },
+
+
+            { text: '---------------', action: () => {} },
+            { text: 'Aide', action: () => help() },
             { text: '---------------', action: () => {} },
             { text: 'Afficher le cookie', action: () => bug.getCookies() },
         ];
@@ -498,7 +549,7 @@ let bug,forms = null;
 
 
         const style_h_hidden_h = document.createElement('style');
-        style_h_hidden_h.textContent = `.h_hidden_h { border: 4px solid red !important;  } label.h_hidden_h_label { color: #8f2222;font-style: oblique;font-size: x-large;margin: 10px;}`;
+        style_h_hidden_h.textContent = `.h_hidden_h { position:relative; border: 4px solid red !important;z-index:99999;  } label.h_hidden_h_label { position:relative;z-index:99999;color: #8f2222;font-style: oblique;font-size: x-large;margin: 10px;}`;
 
         document.head.appendChild(style_h_hidden_h);
 
