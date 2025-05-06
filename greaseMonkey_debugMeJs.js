@@ -497,7 +497,7 @@ elementsWithEvents.forEach(function (element) {
         options.forEach(option => {
             const item = document.createElement('div');
             item.textContent = option.text;
-            item.style.cssText = ` padding: 8px 12px; cursor: pointer; `;
+            item.style.cssText = ` padding: 8px 12px; cursor: pointer;color:red `;
             item.addEventListener('mouseenter', () => item.style.backgroundColor = '#F0F0F0');
             item.addEventListener('mouseleave', () => item.style.backgroundColor = 'white');
             item.addEventListener('click', option.action);
