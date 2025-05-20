@@ -1,0 +1,365 @@
+// ==UserScript==
+// @name        DebugJs
+// @namespace   http://tampermonkey.net/
+// @version     2025-05-20
+// @description Le plus mystérieux des débogueurs…
+// @author      wimbo
+// @match       *://*/*
+// @grant       none
+// @run-at      document-start
+// ==/UserScript==
+
+(function() {
+  'use strict';
+
+  // ─────── 1) Injecter le patch addEventListener DÈS document-start ───────
+  function inject(fn) {
+    const s = document.createElement('script');
+    s.textContent = '(' + fn.toString() + ')();';
+    (document.head || document.documentElement).appendChild(s);
+    s.remove();
+  }
+  inject(function() {
+    const _orig = EventTarget.prototype.addEventListener;
+    EventTarget.prototype.addEventListener = function(type, listener, options) {
+      if (!this._debugJsListeners) {
+        Object.defineProperty(this, '_debugJsListeners', {
+          value: new Map(), // Map<eventType, Array<callback>>
+          writable: false,
+          configurable: false,
+          enumerable: false
+        });
+      }
+      const map = this._debugJsListeners;
+      if (!map.has(type)) map.set(type, []);
+      map.get(type).push(listener);
+      return _orig.call(this, type, listener, options);
+    };
+  });
+
+  // ─────── 2) Wrapper pour attendre le DOM ───────
+  function onReady(fn) {
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn);
+    } else {
+      fn();
+    }
+  }
+
+  onReady(function debugJsMain() {
+    // ─────── 3) Classe debugMe telle quelle ───────
+    let bug, forms = null;
+    let submitFormOff, submitFormOn, log, displayForms, getCookies, findDuplicateIds = null;
+    class debugMe {
+      constructor() {
+        this.confirmSend = false;
+        this.blockForms  = false;
+      }
+      formSubmitListener = event => {
+        if (!this.blockForms) return;
+        event.preventDefault();
+        const formData = new FormData(event.target);
+        console.groupCollapsed('Form Data values');
+        console.log('Action: ' + event.target.action);
+        console.log('Method: ' + event.target.method);
+        console.table(Array.from(formData.entries()));
+        console.groupCollapsed('JSON');
+        console.log(JSON.stringify(Object.fromEntries(formData.entries())));
+        console.groupEnd();
+        console.groupEnd();
+
+        console.groupCollapsed('Form Data details');
+        console.log('Action: ' + event.target.action);
+        console.log('Method: ' + event.target.method);
+        const data = [];
+        for (const [key, value] of formData.entries()) {
+          const input = event.target.elements[key];
+          data.push({
+            name:     key,
+            required: input.required,
+            hidden:   input.type === 'hidden',
+            value
+          });
+        }
+        console.table(data);
+        console.groupCollapsed('JSON');
+        console.log(JSON.stringify(data));
+        console.groupEnd();
+        console.groupEnd();
+
+        if (this.confirmSend && confirm('Soumettre le formulaire ?')) {
+          event.target.submit();
+        }
+      }
+      submitFormOff = () => {
+        for (const f of forms) {
+          f.addEventListener('submit', this.formSubmitListener);
+        }
+        this.displayStatusOff();
+        this.blockForms = true;
+      }
+      submitFormOn = () => {
+        for (const f of forms) {
+          f.removeEventListener('submit', this.formSubmitListener);
+        }
+        this.removeDisplayOffStatus();
+        this.blockForms = false;
+      }
+      log = args => {
+        let type = args === null ? 'null' : typeof args;
+        if (type === 'object' && Array.isArray(args)) type = 'array';
+        console.log(`%cType : ${type}`, 'color: red');
+        if (typeof args === 'string') console.log(`%clength : ${args.length}`, 'color: red');
+        if (typeof args === 'function') console.table(args);
+        else console.log(args);
+        if (typeof args === 'object' || type === 'array') {
+          console.groupCollapsed('Displaying object');
+          console.table(args);
+          console.groupEnd();
+        }
+      }
+      displayStatusOff = () => {
+        if (document.getElementById('debugMeJs_status')) return;
+        const d = document.createElement('div');
+        d.id = 'debugMeJs_status';
+        d.style.cssText = 'position:fixed;top:0;left:0;background:red;color:white;padding:5px;z-index:1000;';
+        d.innerText = 'submit form off';
+        document.body.appendChild(d);
+      }
+      removeDisplayOffStatus = () => {
+        const d = document.getElementById('debugMeJs_status');
+        if (d) d.remove();
+      }
+      displayForms = () => {
+        forms = document.getElementsByTagName('form');
+        if (!forms || forms.length === 0) {
+          console.error('Aucun formulaire');
+          return;
+        }
+        console.groupCollapsed('forms');
+        this.log(forms);
+        console.groupEnd();
+        console.groupCollapsed('Forms_details');
+        for (let i = 0; i < forms.length; i++) {
+          console.groupCollapsed(`Form ${i} : ${forms[i].action}`);
+          const dataForm = {},
+                inputs   = {};
+          dataForm[`Form ${i}`] = {
+            action: forms[i].action,
+            method: forms[i].method,
+            name: forms[i].name,
+            url:  forms[i].ownerDocument.location.href
+          };
+          for (let j=0; j<forms[i].elements.length; j++) {
+            const input = forms[i].elements[j];
+            if (['submit','button','reset'].includes(input.type) || !input.name.trim()) continue;
+            inputs[`Input ${j}`] = {
+              name:     input.name,
+              required: input.required,
+              hidden:   input.type === 'hidden',
+              value:    input.value
+            };
+          }
+          console.table(dataForm);
+          console.table(inputs);
+          console.groupEnd();
+        }
+        console.groupEnd();
+      }
+      getCookies = () => {
+        this.log(document.cookie);
+        const cookies = document.cookie.split(';').map(c => {
+          const [n,v] = c.split('=');
+          return { name:n.trim(), value:v };
+        });
+        console.groupCollapsed('Cookies'); console.table(cookies); console.groupEnd();
+      }
+      findDuplicateIds = () => {
+        const seen = {}, dups = [];
+        const all = document.all || document.getElementsByTagName('*');
+        for (const el of all) {
+          if (!el.id) continue;
+          if (seen[el.id] && !dups.includes(el.id)) dups.push(el.id);
+          else seen[el.id] = true;
+        }
+        if (dups.length) {
+          console.groupCollapsed(`%cDuplicate ids (${dups.length})`, 'color:red;font-weight:bold;');
+          console.table(dups);
+          console.groupEnd();
+        } else {
+          console.log('%cAucun doublon d’identifiant trouvé :)','color:green;font-weight:bold;');
+        }
+      }
+      showHideInputHidden = () => {
+        const inputs = document.getElementsByTagName('input');
+        let count=0, show=false;
+        for (const i of inputs) {
+          if (i.type==='hidden') {
+            i.classList.add('h_hidden_h');
+            i.type='text'; show=true; count++;
+            const lbl = document.createElement('label');
+            lbl.textContent = ` name:${i.name||''} id:${i.id||''}`;
+            lbl.classList.add('h_hidden_h_label');
+            i.parentNode.insertBefore(lbl,i);
+          } else if (i.type==='text' && i.classList.contains('h_hidden_h')) {
+            i.type='hidden'; i.classList.remove('h_hidden_h'); count++;
+            document.querySelectorAll('.h_hidden_h_label').forEach(l=>l.remove());
+          }
+        }
+        if (!count) console.log('%cAucun input hidden trouvé','color:orange');
+        else console.log(`%cLes inputs hidden sont ${show?'visible':'à nouveau cachés'}`,'color:'+ (show?'red':'green'));
+      }
+      monitorNetworkCalls = () => {
+        // XHR
+        const origOpen = XMLHttpRequest.prototype.open,
+              origSend = XMLHttpRequest.prototype.send;
+        XMLHttpRequest.prototype.open = function(m,u){ this._reqM=m; this._reqU=u; return origOpen.apply(this,arguments); };
+        XMLHttpRequest.prototype.send = function(d){
+          console.groupCollapsed(`%cXHR ${this._reqM} ${this._reqU}`,'color:#0066cc;font-weight:bold;');
+          if (d) { console.groupCollapsed('Request Data'); try{console.table(JSON.parse(d));}catch{console.log(d);} console.groupEnd(); }
+          this.addEventListener('load',()=>{
+            console.groupCollapsed('Response');
+            try{ console.table(JSON.parse(this.responseText)); } catch { console.log(this.responseText); }
+            console.groupEnd(); console.groupEnd();
+          });
+          return origSend.apply(this,arguments);
+        };
+        // Fetch
+        const origFetch = window.fetch;
+        window.fetch = (i,init)=> {
+          const url = typeof i==='string'?i:i.url,
+                m   = init?.method||'GET';
+          console.groupCollapsed(`%cFetch ${m} ${url}`,'color:#6600cc;font-weight:bold;');
+          if (init?.body) { console.groupCollapsed('Request Body'); try{console.table(JSON.parse(init.body));}catch{console.log(init.body);} console.groupEnd(); }
+          return origFetch.apply(this,arguments).then(r => { const c = r.clone(); c.text().then(t=>{ console.groupCollapsed('Response'); try{console.table(JSON.parse(t));}catch{console.log(t);} console.groupEnd(); console.groupEnd(); }); return r; });
+        };
+        console.log('%cMonitoring des appels réseau activé','color:green;font-weight:bold;');
+      }
+    }
+
+    // ─────── 4) showEventInfo et tooltip collant ───────
+    const topLeftCorner = document.createElement('div');
+    topLeftCorner.id = 'topLeftCornerInfos';
+    Object.assign(topLeftCorner.style, {
+      position:'fixed', top:'45px', left:'20px',
+      background:'black', color:'white', padding:'10px',
+      zIndex:'1000', display:'none', borderRadius:'5px',
+      boxShadow:'2px 2px 5px rgba(0,0,0,0.1)'
+    });
+    document.body.appendChild(topLeftCorner);
+
+    function showEventInfo(eventType, element, haveEvent = false) {
+      let info = '';
+      if (haveEvent || eventType) {
+        info += `<span style="color:red;">${eventType} :</span> ${element.getAttribute(eventType)}<br>`;
+      }
+      if (element._debugJsListeners && element._debugJsListeners.size > 0) {
+        element._debugJsListeners.forEach((cbs, type) => {
+          info += `<span class="dbg-listener" data-type="${type}"
+                        style="text-decoration:underline;cursor:pointer;color:purple;">${type}</span><br>`;
+        });
+      }
+      if (element.id)   info += `<span style="color:red;">id :</span> ${element.id}<br>`;
+      if (element.name) info += `<span style="color:red;">name :</span> ${element.name}<br>`;
+      topLeftCorner.innerHTML = info;
+      topLeftCorner.style.display = 'block';
+
+      const spans = topLeftCorner.querySelectorAll('.dbg-listener');
+      spans.forEach(span => {
+        let hideTimer;
+        span.addEventListener('mouseenter', e => {
+          clearTimeout(hideTimer);
+          let tip = span._dbgTip;
+          if (!tip) {
+            tip = document.createElement('pre');
+            tip.className = 'dbg-tooltip';
+            const callbacks = element._debugJsListeners.get(span.dataset.type);
+            tip.textContent = callbacks.map(fn => fn.toString()).join('\n\n');
+            Object.assign(tip.style, {
+              position:'fixed', top:`${e.clientY+10}px`, left:`${e.clientX+10}px`,
+              maxWidth:'400px', maxHeight:'200px', overflow:'auto',
+              background:'rgba(20,20,20,0.95)', color:'#ECEFF4',
+              padding:'8px', borderRadius:'4px', zIndex:99999,
+              fontFamily:"'Fira Code', monospace", fontSize:'12px',
+              lineHeight:'1.4', whiteSpace:'pre-wrap', tabSize:'2',
+              opacity:'0', transition:'opacity .15s ease-out'
+            });
+            document.body.appendChild(tip);
+            span._dbgTip = tip;
+            requestAnimationFrame(() => tip.style.opacity='1');
+            tip.addEventListener('mouseenter', () => clearTimeout(hideTimer));
+            tip.addEventListener('mouseleave', scheduleHide);
+          }
+        });
+        function scheduleHide() {
+          clearTimeout(hideTimer);
+          hideTimer = setTimeout(() => {
+            if (span._dbgTip) { span._dbgTip.remove(); delete span._dbgTip; }
+          }, 300);
+        }
+        span.addEventListener('mouseleave', scheduleHide);
+      });
+    }
+
+    // ─────── 5) Révélation des passwords au hover ───────
+    function initPasswordReveal() {
+      document.querySelectorAll('input[type="password"]').forEach(input => {
+        input.addEventListener('mouseenter', () => {
+          input.dataset._origType   = input.type;
+          input.dataset._origColor  = input.style.color;
+          input.dataset._origWeight = input.style.fontWeight;
+          input.type      = 'text';
+          input.style.color      = 'orange';
+          input.style.fontWeight = 'bold';
+        });
+        input.addEventListener('mouseleave', () => {
+          input.type      = input.dataset._origType   || 'password';
+          input.style.color      = input.dataset._origColor  || '';
+          input.style.fontWeight = input.dataset._origWeight || '';
+        });
+      });
+    }
+
+    // ─────── 6) Point d’entrée DebugJs ───────
+    function debugMeStart() {
+      bug        = new debugMe();
+      forms      = document.getElementsByTagName('form');
+      submitFormOff   = bug.submitFormOff;
+      submitFormOn    = bug.submitFormOn;
+      log         = bug.log;
+      displayForms    = bug.displayForms;
+      getCookies  = bug.getCookies;
+      findDuplicateIds = bug.findDuplicateIds;
+      globalThis.fof = submitFormOff;
+      globalThis.fon = submitFormOn;
+      globalThis.log= log;
+      globalThis.df = displayForms;
+      globalThis.cc = getCookies;
+      globalThis.ids= findDuplicateIds;
+      globalThis.sh = bug.showHideInputHidden;
+      globalThis.net= bug.monitorNetworkCalls;
+      globalThis.bug= bug;
+      globalThis.forms_ = forms;
+      globalThis.h = help;
+
+      // style for hidden inputs
+      const style = document.createElement('style');
+      style.textContent = `
+        .h_hidden_h { border:4px solid red!important; }
+        label.h_hidden_h_label { color:#8f2222; font-style:oblique; font-size:x-large; margin:10px; }
+      `;
+      document.head.appendChild(style);
+
+      // start-up routines
+      findDuplicateIds();
+      help();
+      initPasswordReveal();  // <-- révèle les passwords au hover
+    }
+
+    debugMeStart();
+
+    // context menu, help() etc. restent inchangés…
+    // (tu peux copier la logique de menu et de help() depuis ton script d’origine)
+  });
+
+})();
