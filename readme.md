@@ -1,85 +1,130 @@
-# Script Utilisateur DebugJs
+# 🐞 DebugJS Console Last – Tampermonkey SuperScript
 
+> _"Un outil de debug web si pratique qu'on jurerait qu'il a été forgé dans les forges de Valhalla digitale."_
 
-DebugJs est un script utilisateur conçu pour aider les développeurs à déboguer 
+## 🚀 Présentation
 
-## Fonctionnalités
+**DebugJS Console Last** est un script Tampermonkey conçu pour les développeurs web qui souhaitent *prendre le contrôle total* du front-end. À travers une interface discrète mais puissante, ce script vous offre une boîte à outils de debug avancée pour :
 
+- Intercepter et analyser les formulaires
+- Monitorer et bloquer les appels réseau (XHR & Fetch)
+- Détecter les éléments interactifs (onclick, onchange…)
+- Visualiser dynamiquement les listeners JavaScript
+- Inspecter visuellement le DOM
+- Afficher les cookies, les inputs cachés, les IDs dupliqués…
+- Et même… révéler les champs mots de passe 🕵️‍♂️
 
-- **Intercepter les Soumissions de Formulaires** : Empêche la soumission des formulaires et enregistre les données des formulaires.
-- **Autoriser les Soumissions de Formulaires** : Réactive les soumissions de formulaires.
-- **Afficher les Formulaires** : Affiche des informations détaillées sur tous les formulaires de la page web actuelle.
-- **Afficher les Cookies** : Affiche les informations des cookies.
-- **Afficher les Logs** : Affiche des informations détaillées sur les objets ou tableaux.
-- **Trouver les Doublons d'Identifiants** : Recherche les identifiants dupliqués dans le DOM.
-- **Afficher les Input Hidden** : Affiche ou masque les input de type hidden.
-- **Aide** : Affiche une liste des commandes disponibles.
+---
 
-- **Menu Contextuel Personnalisé** : Accessible via un clic droit + Shift, fournissant un accès facile aux options de débogage.
+## ⚙️ Installation
 
-## Installation
+1. Installez [Tampermonkey](https://www.tampermonkey.net/) (ou Greasemonkey).
+2. Créez un nouveau script utilisateur.
+3. Copiez-collez le code depuis ce repo.
+4. Sauvegardez.
+5. Rechargez une page web pour en profiter.
 
-1. **Installer un Gestionnaire de Scripts Utilisateurs** : Vous avez besoin d'une extension de navigateur comme Tampermonkey ou Greasemonkey.
-2. **Ajouter le Script** : Copiez le code dans un nouveau script dans votre gestionnaire de scripts utilisateurs et enregistrez-le.
+---
 
-## Utilisation
+## 🧰 Fonctionnalités principales
 
+### 🧾 Formulaires
 
+- `fof()` → Bloque tous les formulaires et affiche leurs données
+- `fon()` → Réactive la soumission des formulaires
+- `df()` → Affiche tous les formulaires avec leurs champs
+- Ajoute un indicateur visuel `submit form off` en haut à gauche
 
-- `fof()`: Intercepter les soumissions de formulaires.
-- `fon()`: Autoriser les soumissions de formulaires.
-- `df()`: Afficher les formulaires.
-- `log(args)`: Afficher des informations détaillées sur un objet ou un tableau.
-- `cc()`: Afficher les cookies.
-- `bug`: Instance de la classe `debugMe`.
-- `forms_`: Collection de formulaires sur la page actuelle.
-- `ids()`: Trouver les doublons d'identifiants.
-- `sh()`: Afficher ou masquer les champs de type `hidden`.
-- `h()`: Afficher l'aide.
+### 📡 Réseau
 
-- 'bug.confirmSend = false': Désactiver la confirmation par défaut.
-- 'bug.confirmSend = true': Activer la confirmation
+- `net()` → Monitorer les requêtes XHR/Fetch en détail
+- `netoff()` → Bloquer toutes les requêtes réseau
+- `neton()` → Relancer les requêtes bloquées
+- Journalise requêtes, headers, body, réponses, etc.
 
+### 👁️ DOM & Events
 
+- Survol d’éléments = Affichage automatique de leurs événements (`onclick`, `onchange`, etc.)
+- Survol de listeners `addEventListener()` → Affiche le code source dans un **tooltip stylisé**
+- `ids()` → Détecte les IDs dupliqués dans le DOM
+- `sh()` → Affiche/camoufle les `<input type="hidden">` avec style (bordures rouges + labels)
 
-### Comment Accéder au Menu Contextuel Personnalisé
+### 🍪 Divers outils
 
-1. Maintenez la touche `Shift`.
-2. Faites un clic droit sur la page web.
-3. Le menu contextuel personnalisé apparaîtra avec les options de débogage.
+- `cc()` → Affiche les cookies dans la console
+- `log(x)` → Logger amélioré (type, longueur, contenu, table…)
 
-### Paramètres Additionnels
+### 🔐 Bonus malicieux
 
-- **Confirmation pour la Soumission de Formulaires**: Par défaut, le script ne demande pas de confirmation avant de soumettre un formulaire. Pour activer la confirmation, définissez `bug.confirmSend = true`.
+- Survoler un champ `<input type="password">` le rend temporairement visible (coloré en orange, style dramatique inclus).
 
+---
 
+## 🖱️ UI intégrée
 
-### Exemple d'Utilisation
+### 🧭 Bouton flottant
+- Un ⚙️ en bas à droite déploie un **menu moderne et responsive** :
+  - Formulaires (intercepter, afficher…)
+  - Réseau (bloquer, relancer…)
+  - Positionnement du panneau d’info
+  - Outils divers
 
-```javascript
-// Intercepter les soumissions de formulaires
-fof();
+### 🖱️ Menu contextuel alternatif
+- **Shift + clic droit** → ancien menu contextuel avec options rapides
 
-// Autoriser les soumissions de formulaires
-fon();
+---
 
-// Afficher tous les formulaires
-df();
+## 🧪 Console globale
 
-// Afficher les cookies
-cc();
+Les fonctions suivantes sont accessibles via `console` :
 
-//Affiche les inputs hidden avec leur attribut name
-sh();
+| Commande         | Description                                 |
+|------------------|---------------------------------------------|
+| `fof()`          | Bloque les formulaires                      |
+| `fon()`          | Débloque les formulaires                    |
+| `df()`           | Affiche les formulaires                     |
+| `net()`          | Monitorer les requêtes réseau               |
+| `netoff()`       | Bloquer les requêtes réseau                 |
+| `neton()`        | Relancer les requêtes bloquées              |
+| `ids()`          | Recherche d’IDs dupliqués                   |
+| `sh()`           | Toggle des `input[type="hidden"]`          |
+| `cc()`           | Voir les cookies                            |
+| `log(x)`         | Logger magique                              |
+| `h()`            | Affiche un panneau d’aide détaillé         |
 
-//Affiche les doublons d'id ( se lance à chaque rafraichissement de page )
-ids();
+---
 
+## 📸 Aperçu visuel
 
-//custom log amelioré
-log(args) // affichera args avec plus de details que console.log(args)
-```
+> ⚙️ Interface flottante + tooltips glassmorphiques + inspection instantanée  
+> … Un mélange entre **DevTools**, **Dark Souls**, et **Tron Legacy**.
 
-![image](https://raw.githubusercontent.com/misterwimbo/debugMeJs/main/debugmeJS.png)
+---
 
+## 💡 Astuces
 
+- L’UI s’adapte à la position : haut/bas, gauche/droite.
+- Les requêtes bloquées sont **stockées** et **rejouées**.
+- L’aide (`h()`) est riche, commentée, et mise en forme.
+- Les événements inline ET dynamiques sont inspectables.
+
+---
+
+## 🧙 Auteurs
+
+- **wimbo** – maître des scripts, dompteur de formulaires, et fan des tooltips chics.
+
+---
+
+## 🛡️ Disclaimer
+
+Ce script est conçu à des fins de debugging uniquement. À utiliser dans des environnements que vous contrôlez. Respectez toujours les règles de sécurité et de vie privée des applications que vous manipulez.
+
+---
+
+## 🏁 Pour commencer
+
+Une fois installé, ouvrez la console développeur (`F12`) et tapez :
+
+```js
+h();

@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         DebugJs-console
+// @name         DebugJs-console-last
 // @namespace    http://tampermonkey.net/
 // @version      2024-08-05
 // @description  try to take over the world!
@@ -593,38 +593,297 @@
                 console.log('%cMonitoring des appels réseau activé (XHR et Fetch)', 'color: green; font-weight: bold;');
             }
 
-        } // End of debugMe class
-
-        ////////////////////////////////////////
-        // Event Info Display (Top-Left Corner) //
+        } // End of debugMe class        ////////////////////////////////////////
+        // Event Info Display (Info Panel) //
         ////////////////////////////////////////
 
         var elementsWithEvents = document.querySelectorAll('[onclick], [onchange], [onkeyup], [onkeydown], [onkeypress], [ondblclick]');
         var inputsElements = document.querySelectorAll('input, select, textarea, button');
 
-        // Create the displayed element in the top-left corner
-        var topLeftCorner = document.createElement('div');
-        topLeftCorner.style.position = 'fixed';
-        topLeftCorner.style.top = '45px';
-        topLeftCorner.style.left = '20px';
-        topLeftCorner.style.background = 'black';
-        topLeftCorner.style.padding = '10px';
-        topLeftCorner.style.zIndex = '99999'; // Mis à jour pour être 99999
-        topLeftCorner.style.color = 'white';
-        topLeftCorner.style.display = 'none';
-        topLeftCorner.style.borderRadius = '5px';
-        topLeftCorner.style.boxShadow = '2px 2px 5px rgba(0,0,0,0.1)';
-        topLeftCorner.id = 'topLeftCornerInfos';
-        document.body.appendChild(topLeftCorner);
+        // Variable globale pour la position de l'info panel
+        let infoPanelPosition = 'top-left'; // Position par défaut
 
-        let hideTimeout; // Variable pour stocker le timeout de masquage
+        // Fonction pour obtenir les styles de position selon la position choisie
+        function getInfoPanelPositionStyles(position) {
+            const styles = {
+                position: 'fixed',
+                zIndex: '99999'
+            };
 
-        // Fonction pour cacher le topLeftCorner
-        function hideTopLeftCorner() {
+            switch(position) {
+                case 'top-left':
+                    styles.top = '45px';
+                    styles.left = '20px';
+                    styles.right = 'auto';
+                    styles.bottom = 'auto';
+                    break;
+                case 'top-right':
+                    styles.top = '45px';
+                    styles.right = '20px';
+                    styles.left = 'auto';
+                    styles.bottom = 'auto';
+                    break;
+                case 'bottom-left':
+                    styles.bottom = '100px';
+                    styles.left = '20px';
+                    styles.top = 'auto';
+                    styles.right = 'auto';
+                    break;
+                case 'bottom-right':
+                    styles.bottom = '100px';
+                    styles.right = '20px';
+                    styles.top = 'auto';
+                    styles.left = 'auto';
+                    break;
+            }
+            return styles;
+        }
+
+        // Create the displayed element (renamed from topLeftCorner)
+        var infoPanel = document.createElement('div');
+
+        // Applique les styles de position par défaut
+        const defaultStyles = getInfoPanelPositionStyles(infoPanelPosition);
+        Object.assign(infoPanel.style, defaultStyles);
+        // Styles additionnels pour l'info panel
+        infoPanel.style.background = 'linear-gradient(135deg, rgba(20, 25, 33, 0.98) 0%, rgba(30, 35, 48, 0.95) 100%)';
+        infoPanel.style.backdropFilter = 'blur(16px) saturate(180%)';
+        infoPanel.style.padding = '16px 20px';
+        infoPanel.style.color = '#f8fafc';
+        infoPanel.style.display = 'none';
+        infoPanel.style.borderRadius = '12px';
+        infoPanel.style.border = '1px solid rgba(148, 163, 184, 0.2)';
+        infoPanel.style.boxShadow = '0 24px 48px rgba(0, 0, 0, 0.4), 0 12px 24px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.08)';
+        infoPanel.style.fontFamily = '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+        infoPanel.style.fontSize = '14px';
+        infoPanel.style.lineHeight = '1.5';
+        infoPanel.style.letterSpacing = '0.02em';
+        infoPanel.style.minWidth = '200px';
+        infoPanel.style.maxWidth = '350px';
+        infoPanel.style.opacity = '0';
+        infoPanel.style.transform = 'translateY(-8px) scale(0.95)';
+        infoPanel.style.transition = 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)';
+        infoPanel.id = 'debugInfoPanel';
+        document.body.appendChild(infoPanel);
+
+        // Fonction pour changer la position de l'info panel
+        function changeInfoPanelPosition(newPosition) {
+            infoPanelPosition = newPosition;
+            const newStyles = getInfoPanelPositionStyles(newPosition);
+
+            // Applique les nouveaux styles de position
+            Object.assign(infoPanel.style, newStyles);
+
+            console.log(`%cPosition de l'info panel changée : ${newPosition}`, 'color: #10b981; font-weight: bold;');
+        }        let hideTimeout; // Variable pour stocker le timeout de masquage
+
+        // Fonction pour cacher l'info panel
+        function hideInfoPanel() {
             clearTimeout(hideTimeout); // Annule tout timeout en cours
             hideTimeout = setTimeout(() => {
-                topLeftCorner.style.display = 'none';
-            }, 5000); // Cache après 5 secondes
+                infoPanel.style.display = 'none';
+            }, 4000); // Cache après 4 secondes
+        }
+
+        // Variables globales pour Prism.js
+        let activeTooltips = [];
+        let tooltipHideTimer = null;
+
+        // Fonction pour nettoyer tous les tooltips existants
+        function clearAllTooltips() {
+            activeTooltips.forEach(tooltip => {
+                if (tooltip && tooltip.parentNode) {
+                    tooltip.remove();
+                }
+            });
+            activeTooltips = [];
+            if (tooltipHideTimer) {
+                clearTimeout(tooltipHideTimer);
+                tooltipHideTimer = null;
+            }
+        }
+
+        // Fonction pour créer le CSS de coloration syntaxique JavaScript personnalisé
+        function createCustomJSSyntaxCSS() {
+            const customSyntaxCSS = document.createElement('style');
+            customSyntaxCSS.id = 'custom-js-syntax-highlighting';
+            customSyntaxCSS.textContent = `
+                /* Style Okaidia personnalisé pour JavaScript */
+                .dbg-modern-tooltip pre {
+                    background: #272822 !important;
+                    color: #f8f8f2;
+                    margin: 0;
+                    padding: 20px 24px;
+                    overflow: auto;
+                    border-radius: 12px;
+                    font-family: "JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+                    font-size: 13px;
+                    line-height: 1.6;
+                }
+
+                .dbg-modern-tooltip code {
+                    background: transparent !important;
+                    color: #f8f8f2;
+                    font-family: inherit;
+                    font-size: inherit;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                }
+
+                /* Mots-clés JavaScript */
+                .js-keyword {
+                    color: #66d9ef !important;
+                    font-weight: bold;
+                }
+
+                /* Chaînes de caractères */
+                .js-string {
+                    color: #e6db74 !important;
+                }
+
+                /* Nombres */
+                .js-number {
+                    color: #ae81ff !important;
+                }
+
+                /* Commentaires */
+                .js-comment {
+                    color: #75715e !important;
+                    font-style: italic;
+                }
+
+                /* Fonctions */
+                .js-function {
+                    color: #a6e22e !important;
+                }
+
+                /* Opérateurs */
+                .js-operator {
+                    color: #f92672 !important;
+                }
+
+                /* Ponctuation */
+                .js-punctuation {
+                    color: #f8f8f2 !important;
+                }
+
+                /* Variables et propriétés */
+                .js-property {
+                    color: #fd971f !important;
+                }
+
+                /* Boolean et null */
+                .js-boolean {
+                    color: #ae81ff !important;
+                }
+
+                /* Regex */
+                .js-regex {
+                    color: #f92672 !important;
+                }
+            `;
+            document.head.appendChild(customSyntaxCSS);
+        }
+
+        // Fonction pour coloriser le code JavaScript manuellement (version corrigée)
+        function highlightJavaScript(code) {
+            // Mots-clés JavaScript
+            const keywords = [
+                'abstract', 'await', 'boolean', 'break', 'byte', 'case', 'catch', 'char', 'class', 'const',
+                'continue', 'debugger', 'default', 'delete', 'do', 'double', 'else', 'enum', 'export',
+                'extends', 'false', 'final', 'finally', 'float', 'for', 'function', 'goto', 'if',
+                'implements', 'import', 'in', 'instanceof', 'int', 'interface', 'let', 'long', 'native',
+                'new', 'null', 'package', 'private', 'protected', 'public', 'return', 'short', 'static',
+                'super', 'switch', 'synchronized', 'this', 'throw', 'throws', 'transient', 'true', 'try',
+                'typeof', 'var', 'void', 'volatile', 'while', 'with', 'yield', 'async', 'of'
+            ];
+
+            let highlightedCode = code;
+
+            // Échapper le HTML d'abord
+            highlightedCode = highlightedCode
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+            // Créer un tableau pour éviter les remplacements en cascade
+            const tokens = [];
+            let currentIndex = 0;
+
+            // Fonction helper pour ajouter un token
+            function addToken(match, offset, className) {
+                tokens.push({
+                    start: offset,
+                    end: offset + match.length,
+                    original: match,
+                    className: className
+                });
+            }
+
+            // Trouver les commentaires
+            const commentRegex = /(\/\/.*$|\/\*[\s\S]*?\*\/)/gm;
+            let match;
+            while ((match = commentRegex.exec(highlightedCode)) !== null) {
+                addToken(match[0], match.index, 'js-comment');
+            }
+
+            // Trouver les chaînes de caractères
+            const stringRegex = /(['"`])((?:(?!\1)[^\\]|\\.)*)(\1)/g;
+            while ((match = stringRegex.exec(highlightedCode)) !== null) {
+                addToken(match[0], match.index, 'js-string');
+            }
+
+            // Trouver les nombres
+            const numberRegex = /\b(\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/g;
+            while ((match = numberRegex.exec(highlightedCode)) !== null) {
+                addToken(match[0], match.index, 'js-number');
+            }
+
+            // Trouver les mots-clés
+            keywords.forEach(keyword => {
+                const regex = new RegExp(`\\b(${keyword})\\b`, 'g');
+                while ((match = regex.exec(highlightedCode)) !== null) {
+                    addToken(match[0], match.index, 'js-keyword');
+                }
+            });
+
+            // Trouver les fonctions (nom suivi de parenthèses)
+            const functionRegex = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*(?=\()/g;
+            while ((match = functionRegex.exec(highlightedCode)) !== null) {
+                addToken(match[1], match.index, 'js-function');
+            }
+
+
+            const propertyRegex = /\b([a-zA-Z_$][a-zA-Z0-9_$]*)\s*\.\s*([a-zA-Z_$][a-zA-Z0-9_$]*)/g;
+            while ((match = propertyRegex.exec(highlightedCode)) !== null) {
+                addToken(match[2], match.index + match[1].length + 1, 'js-function');
+            }
+
+            // Trier les tokens par position pour éviter les conflits
+            tokens.sort((a, b) => a.start - b.start);
+
+            // Supprimer les tokens qui se chevauchent (garder le premier)
+            const cleanTokens = [];
+            let lastEnd = 0;
+            tokens.forEach(token => {
+                if (token.start >= lastEnd) {
+                    cleanTokens.push(token);
+                    lastEnd = token.end;
+                }
+            });
+
+            // Appliquer la coloration en commençant par la fin pour ne pas décaler les indices
+            cleanTokens.reverse().forEach(token => {
+                const before = highlightedCode.substring(0, token.start);
+                const content = highlightedCode.substring(token.start, token.end);
+                const after = highlightedCode.substring(token.end);
+
+                highlightedCode = before +
+                    `<span class="${token.className}">${content}</span>` +
+                    after;
+            });
+
+            return highlightedCode;
         }
 
         // Fonction pour afficher les informations de l'élément
@@ -635,99 +894,233 @@
             // Si l'élément a un attribut d'événement (onclick, onchange, etc.)
             if (eventType && element.hasAttribute(eventType)) {
                 const attrCode = element.getAttribute(eventType);
-                info += `<span class="dbg-attr-event" data-code="${attrCode}" style="color:red;text-decoration:underline;cursor:pointer;">${eventType} :</span> ${attrCode}<br>`;
+                info += `<span class="dbg-attr-event" data-code="${attrCode}" style="color:#fb7185;text-decoration:underline;cursor:pointer;font-weight:500;">${eventType} :</span> <span style="color:#e2e8f0;">${attrCode}</span><br>`;
             }
 
             // Add ID if it exists
             if (element.id) {
-                info += `<span style="color:red;">id :</span>  ${element.id}<br>`;
+                info += `<span style="color:#fb7185;font-weight:500;">id :</span> <span style="color:#94a3b8;">${element.id}</span><br>`;
             }
 
             // Display addEventListener list
             if (element._debugJsListeners && element._debugJsListeners.size > 0) {
                 element._debugJsListeners.forEach((callbacks, type) => {
-                    info += `<span class="dbg-listener" data-type="${type}" style="text-decoration:underline;cursor:pointer;">${type}</span><br>`;
+                    info += `<span class="dbg-listener" data-type="${type}" style="color:#60a5fa;text-decoration:underline;cursor:pointer;font-weight:500;">${type}</span><br>`;
                 });
             }
             // Add name if it exists
             if (element.name) {
-                info += `<span style="color:red;">name :</span>  ${element.name}<br>`;
-            }
+                info += `<span style="color:#fb7185;font-weight:500;">name :</span> <span style="color:#94a3b8;">${element.name}</span><br>`;
+            }            // Update only the content
+            infoPanel.innerHTML = '';
+            infoPanel.innerHTML += info;
 
-            // Update only the content
-            topLeftCorner.innerHTML = '';
-            topLeftCorner.innerHTML += info;
-            topLeftCorner.style.display = 'block';
+            // Animation d'apparition moderne
+            infoPanel.style.display = 'block';
+            requestAnimationFrame(() => {
+                infoPanel.style.opacity = '1';
+                infoPanel.style.transform = 'translateY(0px) scale(1)';
+            });
 
-            // Fonction pour créer et afficher un tooltip
-            function createAndShowTooltip(e, content) {
-                clearTimeout(hideTimeout); // Empêche le topLeftCorner de disparaître pendant l'affichage du tooltip
+            // Fonction moderne pour créer et afficher un tooltip
+            function createModernTooltip(e, content) {                // Nettoyer les tooltips existants
+                clearAllTooltips();
 
-                let tip = document.createElement('pre');
-                tip.className = 'dbg-tooltip';
-                tip.textContent = content;
-                Object.assign(tip.style, {
+                // Empêche l'infoPanel de disparaître
+                clearTimeout(hideTimeout);
+
+                // Créer le CSS personnalisé s'il n'existe pas
+                if (!document.getElementById('custom-js-syntax-highlighting')) {
+                    createCustomJSSyntaxCSS();
+                }
+
+                const tooltip = document.createElement('div');
+                tooltip.className = 'dbg-modern-tooltip';
+
+                // Vérifier si le contenu est trop long et le tronquer si nécessaire
+                let displayContent = content;
+                if (displayContent.length > 10000) {
+                    displayContent = displayContent.substring(0, 10000) + '\n\n... [Code tronqué - trop long pour l\'affichage]';
+                }
+
+                // Coloriser le code avec notre fonction personnalisée corrigée
+                const highlightedCode = highlightJavaScript(displayContent);
+
+                // Créer le contenu sans risque de balises non fermées
+                const pre = document.createElement('pre');
+                const code = document.createElement('code');
+                code.className = 'language-js';
+                code.innerHTML = highlightedCode;
+                pre.appendChild(code);
+                tooltip.appendChild(pre);
+
+                // Calcul de position intelligente
+                const viewportWidth = window.innerWidth;
+                const viewportHeight = window.innerHeight;
+                const tooltipWidth = Math.min(600, viewportWidth * 0.8);
+                const tooltipHeight = Math.min(400, viewportHeight * 0.6);
+
+                let left = e.clientX + 15;
+                let top = e.clientY + 15;
+
+                // Ajustement si débordement à droite
+                if (left + tooltipWidth > viewportWidth - 20) {
+                    left = e.clientX - tooltipWidth - 15;
+                }
+
+                // Ajustement si débordement en bas
+                if (top + tooltipHeight > viewportHeight - 20) {
+                    top = e.clientY - tooltipHeight - 15;
+                }
+
+                // Styles modernes avec glassmorphism
+                Object.assign(tooltip.style, {
                     position: 'fixed',
-                    top: `${e.clientY + 10}px`,
-                    left: `${e.clientX + 10}px`,
-                    maxWidth: '800px',
-                    maxHeight: '600px',
-                    overflow: 'auto',
-                    background: 'rgba(0,0,0,0.85)',
-                    color: '#fff',
-                    padding: '8px',
-                    borderRadius: '4px',
-                    zIndex: '99999', // Mis à jour pour être 99999
-                    fontSize: '12px',
-                    whiteSpace: 'pre-wrap'
+                    top: `${Math.max(10, top)}px`,
+                    left: `${Math.max(10, left)}px`,
+                    maxWidth: `${tooltipWidth}px`,
+                    maxHeight: `${tooltipHeight}px`,
+                    padding: '0',
+                    background: 'linear-gradient(135deg, rgba(30, 41, 59, 0.95) 0%, rgba(45, 55, 72, 0.98) 100%)',
+                    backdropFilter: 'blur(20px) saturate(180%)',
+                    border: '1px solid rgba(148, 163, 184, 0.15)',
+                    borderRadius: '16px',
+                    boxShadow: '0 32px 64px rgba(0, 0, 0, 0.4), 0 16px 32px rgba(0, 0, 0, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                    color: '#f1f5f9',
+                    fontSize: '13px',
+                    fontFamily: '"JetBrains Mono", "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+                    fontWeight: '400',
+                    lineHeight: '1.6',
+                    letterSpacing: '0.025em',
+                    overflow: 'hidden',
+                    zIndex: '100000',
+                    opacity: '0',
+                    transform: 'translateY(12px) scale(0.92)',
+                    transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                    cursor: 'text',
+                    userSelect: 'text'
                 });
-                document.body.appendChild(tip);
 
-                let tipHideTimer;
-                const scheduleTipHide = () => {
-                    tipHideTimer = setTimeout(() => {
-                        tip.remove();
-                        hideTopLeftCorner(); // Réactive le timer de masquage du topLeftCorner
-                    }, 300); // 300 ms grace period
+                // Styles supplémentaires pour le scrolling
+                const style = document.createElement('style');
+                style.textContent = `
+                    .dbg-modern-tooltip pre {
+                        max-height: ${tooltipHeight - 40}px;
+                        scrollbar-width: thin;
+                        scrollbar-color: rgba(148, 163, 184, 0.3) transparent;
+                    }
+                    .dbg-modern-tooltip pre::-webkit-scrollbar {
+                        width: 8px;
+                        height: 8px;
+                    }
+                    .dbg-modern-tooltip pre::-webkit-scrollbar-track {
+                        background: rgba(148, 163, 184, 0.1);
+                        border-radius: 4px;
+                    }
+                    .dbg-modern-tooltip pre::-webkit-scrollbar-thumb {
+                        background: rgba(148, 163, 184, 0.3);
+                        border-radius: 4px;
+                    }
+                    .dbg-modern-tooltip pre::-webkit-scrollbar-thumb:hover {
+                        background: rgba(148, 163, 184, 0.5);
+                    }
+                `;
+                document.head.appendChild(style);
+
+                document.body.appendChild(tooltip);
+                activeTooltips.push(tooltip);
+
+                // Animation d'apparition
+                requestAnimationFrame(() => {
+                    tooltip.style.opacity = '1';
+                    tooltip.style.transform = 'translateY(0px) scale(1)';
+                });
+
+                // Gestion des événements pour persistance améliorée
+                const handleMouseEnter = () => {
+                    // Annuler DÉFINITIVEMENT tous les timers de disparition
+                    if (tooltipHideTimer) {
+                        clearTimeout(tooltipHideTimer);
+                        tooltipHideTimer = null;
+                    }
+                    clearTimeout(hideTimeout);
+
+                    // Marquer le tooltip comme étant survolé
+                    tooltip.setAttribute('data-hovered', 'true');
                 };
 
-                tip.addEventListener('mouseenter', () => {
-                    clearTimeout(tipHideTimer);
-                    clearTimeout(hideTimeout);
-                });
-                tip.addEventListener('mouseleave', scheduleTipHide);
+                const handleMouseLeave = () => {
+                    // Retirer le marqueur de survol
+                    tooltip.removeAttribute('data-hovered');
 
-                return tip;
-            }
+                    // Délai généreux quand on quitte le tooltip
+                    tooltipHideTimer = setTimeout(() => {
+                        clearAllTooltips();
+                        hideTopLeftCorner();
+                    }, 800);
+                };
 
+                tooltip.addEventListener('mouseenter', handleMouseEnter);
+                tooltip.addEventListener('mouseleave', handleMouseLeave);
 
-            // Add event listeners for the 'dbg-listener' spans (addEventListener callbacks)
-            const listenerSpans = topLeftCorner.querySelectorAll('.dbg-listener');
+                return tooltip;
+            }            // Add event listeners for the 'dbg-listener' spans (addEventListener callbacks)
+            const listenerSpans = infoPanel.querySelectorAll('.dbg-listener');
             listenerSpans.forEach(span => {
                 span.addEventListener('mouseenter', function(e) {
+                    // Annuler immédiatement tout timer de disparition
+                    if (tooltipHideTimer) {
+                        clearTimeout(tooltipHideTimer);
+                        tooltipHideTimer = null;
+                    }
+                    clearTimeout(hideTimeout);
+
                     const type = this.dataset.type;
                     const callbacks = element._debugJsListeners.get(type);
-                    const content = callbacks.map(fn => fn.toString()).join('\n\n');
-                    this._dbgTip = createAndShowTooltip(e, content); // Stocke le tooltip pour le gérer
+                    const content = callbacks.map(fn => fn.toString()).join('\n\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n');
+                    createModernTooltip(e, content);
                 });
                 span.addEventListener('mouseleave', function() {
-                    // Le hideTimer est déjà géré par la fonction createAndShowTooltip
+                    // Vérifier si un tooltip est survolé avant de programmer sa disparition
+                    tooltipHideTimer = setTimeout(() => {
+                        // Double vérification : ne supprimer que si aucun tooltip n'est survolé
+                        const hoveredTooltip = document.querySelector('.dbg-modern-tooltip[data-hovered="true"]');
+                        if (!hoveredTooltip && activeTooltips.length > 0) {
+                            clearAllTooltips();
+                            hideInfoPanel();
+                        }
+                    }, 800);
                 });
             });
 
             // Add event listeners for the 'dbg-attr-event' spans (inline event attributes)
-            const attrEventSpans = topLeftCorner.querySelectorAll('.dbg-attr-event');
+            const attrEventSpans = infoPanel.querySelectorAll('.dbg-attr-event');
             attrEventSpans.forEach(span => {
                 span.addEventListener('mouseenter', function(e) {
+                    // Annuler immédiatement tout timer de disparition
+                    if (tooltipHideTimer) {
+                        clearTimeout(tooltipHideTimer);
+                        tooltipHideTimer = null;
+                    }
+                    clearTimeout(hideTimeout);
+
                     const content = this.dataset.code;
-                    this._dbgTip = createAndShowTooltip(e, content); // Stocke le tooltip pour le gérer
+                    createModernTooltip(e, content);
                 });
                 span.addEventListener('mouseleave', function() {
-                    // Le hideTimer est déjà géré par la fonction createAndShowTooltip
+                    // Vérifier si un tooltip est survolé avant de programmer sa disparition
+                    tooltipHideTimer = setTimeout(() => {
+                        // Double vérification : ne supprimer que si aucun tooltip n'est survolé
+                        const hoveredTooltip = document.querySelector('.dbg-modern-tooltip[data-hovered="true"]');
+                        if (!hoveredTooltip && activeTooltips.length > 0) {
+                            clearAllTooltips();
+                            hideInfoPanel();
+                        }
+                    }, 200);
                 });
             });
 
-            hideTopLeftCorner(); // Déclenche le masquage après 5 secondes si pas d'interaction
+            hideInfoPanel(); // Déclenche le masquage après 4 secondes si pas d'interaction
         }
 
         // Add mouseover/mouseout listeners to elements
@@ -760,15 +1153,26 @@
                     });
                 }
             });
+        });        // Gérer le masquage de l'infoPanel si la souris quitte la zone elle-même
+        infoPanel.addEventListener('mouseenter', () => {
+            clearTimeout(hideTimeout); // Annule le masquage si la souris entre dans l'infoPanel
+            if (tooltipHideTimer) {
+                clearTimeout(tooltipHideTimer);
+                tooltipHideTimer = null;
+            }
+        });
+        infoPanel.addEventListener('mouseleave', () => {
+            hideInfoPanel(); // Réactive le masquage si la souris quitte l'infoPanel
+            if (activeTooltips.length > 0) {
+                tooltipHideTimer = setTimeout(() => {
+                    clearAllTooltips();
+                }, 500);
+            }
         });
 
-        // Gérer le masquage du topLeftCorner si la souris quitte la zone elle-même
-        topLeftCorner.addEventListener('mouseenter', () => {
-            clearTimeout(hideTimeout); // Annule le masquage si la souris entre dans le topLeftCorner
-        });
-        topLeftCorner.addEventListener('mouseleave', () => {
-            hideTopLeftCorner(); // Réactive le masquage si la souris quitte le topLeftCorner
-        });
+        // Nettoyer les tooltips lors du scroll ou resize
+        window.addEventListener('scroll', clearAllTooltips);
+        window.addEventListener('resize', clearAllTooltips);
 
 
         ////////////////////////////////////////
@@ -848,9 +1252,7 @@
                 pointer-events: none;
                 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
                 overflow: hidden;
-            `;
-
-            // Définition des catégories et options
+            `;            // Définition des catégories et options
             const menuStructure = [
                 {
                     title: 'Formulaires',
@@ -868,6 +1270,16 @@
                         { icon: '🚫', text: 'Bloquer', action: () => bug.networkOff() },
                         { icon: '✅', text: 'Autoriser', action: () => bug.networkOn() },
                         { icon: '📊', text: 'Monitorer', action: () => bug.monitorNetworkCalls() }
+                    ]
+                },
+                {
+                    title: 'Position Info Panel',
+                    icon: '📍',
+                    items: [
+                        { icon: '↖️', text: 'Haut Gauche', action: () => changeInfoPanelPosition('top-left') },
+                        { icon: '↗️', text: 'Haut Droite', action: () => changeInfoPanelPosition('top-right') },
+                        { icon: '↙️', text: 'Bas Gauche', action: () => changeInfoPanelPosition('bottom-left') },
+                        { icon: '↘️', text: 'Bas Droite', action: () => changeInfoPanelPosition('bottom-right') }
                     ]
                 },
                 {
@@ -1021,9 +1433,7 @@
                 border: 1px solid rgb(239 167 167);
                 box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
                 z-index: 99999; /* Mis à jour pour être 99999 */
-            `;
-
-            // Menu options
+            `;            // Menu options
             const options = [{
                 text: 'Intercepter les Formulaires',
                 action: () => bug.submitFormOff()
@@ -1045,6 +1455,21 @@
             }, {
                 text: 'Monitorer Appels Réseau',
                 action: () => bug.monitorNetworkCalls()
+            }, {
+                text: '---------------',
+                action: () => {}
+            }, {
+                text: 'Position Info Panel - Haut Gauche',
+                action: () => changeInfoPanelPosition('top-left')
+            }, {
+                text: 'Position Info Panel - Haut Droite',
+                action: () => changeInfoPanelPosition('top-right')
+            }, {
+                text: 'Position Info Panel - Bas Gauche',
+                action: () => changeInfoPanelPosition('bottom-left')
+            }, {
+                text: 'Position Info Panel - Bas Droite',
+                action: () => changeInfoPanelPosition('bottom-right')
             }, {
                 text: '---------------',
                 action: () => {}
@@ -1195,10 +1620,10 @@
             // Styles for Hidden Inputs           //
             ////////////////////////////////////////
 
-            const style_h_hidden_h = document.createElement('style');
-            // Z-index des labels ajusté pour être au-dessus
-            style_h_hidden_h.textContent = `.h_hidden_h { position:relative; border: 4px solid red !important;z-index:99999;  } label.h_hidden_h_label { position:relative;z-index:99999;color: #8f2222;font-style: oblique;font-size: x-large;margin: 10px;}`;
+          const style_h_hidden_h = document.createElement('style');
+            style_h_hidden_h.textContent = `.h_hidden_h { position: relative; border: 4px solid red !important; z-index: 99999; } .h_hidden_h:not(label) { color: black; max-height: 35px; min-width: 250px; display: inline-block; } label.h_hidden_h_label { position: relative; z-index: 99999; color: #8f2222; font-style: oblique; font-size: x-large; margin: 10px; min-width: 200px; margin-right: 8px; border: 2px solid #ca2121; overflow: auto; padding: 5px; }`;
             document.head.appendChild(style_h_hidden_h);
+
 
 
             ids();
